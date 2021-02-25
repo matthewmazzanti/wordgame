@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+
+ROOT=$(git rev-parse --show-toplevel)
+SRV="$ROOT/srv"
+
+CompileDaemon -directory="$SRV" -command="$SRV/wordgame"

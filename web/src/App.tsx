@@ -10,7 +10,7 @@ import {
 const randomFrom = (chars: string) =>
   chars.charAt(Math.floor(Math.random() * chars.length))
 
-const alpha = () => randomFrom("abcdefghijklmnopqrstuvwxyz");
+const alpha = () => randomFrom("abcdefghijklmnoprstuvwy");
 const vowel = () => randomFrom("aeiou");
 
 const shuffle = (arr: any[]) => {
@@ -118,25 +118,53 @@ const Play = ({ match }: PlayProps) => {
     <div>&nbsp;{state.guess}</div>
 
     {state.charArr.map(c =>
-      <button key={c} onClick={() => setState(addChar(c, state))}>{c}</button>
+      <button
+        key={c}
+        onClick={() => setState(addChar(c, state))}
+        style={{
+          margin: "5px",
+          height: "40px",
+          width: "50px",
+          fontSize: "18px",
+        }}
+      >
+        {c}
+      </button>
     )}
 
-    <button
-      onClick={() => setState(enter(state))}
-      disabled={state.guess.length <= 3}
-    >
-      Enter
-    </button>
+    <div>
+      <button
+        onClick={() => setState(enter(state))}
+        disabled={state.guess.length <= 3}
+        style={{margin: "5px", height: "40px", width: "130px"}}
+      >
+        Enter
+      </button>
 
-    <button onClick={() => setState(backspace(state))}>Delete</button>
+      <button
+        onClick={() => setState(backspace(state))}
+        style={{margin: "5px", height: "40px", width: "130px"}}
+      >
+        Delete
+      </button>
 
-    <button onClick={() => setState(shuffleState(state))}>Shuffle</button>
+      <button
+        onClick={() => setState(shuffleState(state))}
+        style={{margin: "5px", height: "40px", width: "130px"}}
+      >
+        Shuffle
+      </button>
+    </div>
+
+    <div>{state.words.length} words remain</div>
 
     <ul>
       {state.correct.map(word => 
         <li key={word}>{word}</li>
       )}
     </ul>
+
+    <Home/>
   </div>;
 }
 

@@ -21,7 +21,7 @@ func main() {
 	}
 
 	http.HandleFunc("/", HomeHandler(db))
-	log.Fatal(http.ListenAndServe(":8000", nil))
+	log.Fatal(http.ListenAndServe("0.0.0.0:8000", nil))
 }
 
 func HomeHandler(db []Entry) func(http.ResponseWriter, *http.Request) {

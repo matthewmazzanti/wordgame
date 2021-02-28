@@ -4,4 +4,7 @@ ROOT=$(git rev-parse --show-toplevel)
 WEB="$ROOT/web"
 
 cd "$WEB"
-npm start
+FORCE_COLOR=true CI=true BROWSER=none npm start \
+    | while IFS= read -r line; do
+        echo "web: $line"
+    done

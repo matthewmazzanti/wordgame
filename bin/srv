@@ -3,4 +3,10 @@
 ROOT=$(git rev-parse --show-toplevel)
 SRV="$ROOT/srv"
 
-CompileDaemon -directory="$SRV" -command="$SRV/wordgame"
+CompileDaemon \
+    -directory="$SRV" \
+    -command="$SRV/wordgame" \
+    -log-prefix=false \
+    |& while IFS= read -r line; do
+        echo "srv: $line"
+    done

@@ -5,5 +5,7 @@ pkgs.mkShell {
     go
     compile-daemon
     nodejs_latest
+    docker-compose
+    parallel
   ];
 }

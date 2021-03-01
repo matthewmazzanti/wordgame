@@ -1,0 +1,56 @@
+#!/usr/bin/env python3
+
+from os import environ as env
+
+import mysql.connector
+
+ROOT = env["ROOT"]
+
+def bitmap(word):
+    bitmap = 0
+    for char in word:
+        index = ord(char.lower()) - 97
+        bitmap = bitmap | (1 << index)
+
+    return bitmap
+
+def insert(cursor, words):
+    query = "insert into word (word, bitmap) values (%s, %s);"
+    cursor.executemany(query, words)
+
+def main():
+    db = mysql.connector.connect(
+        user="root",
+        password="password",
+        host="127.0.0.1",
+        database="wordgame"
+    )
+
+    cursor = db.cursor()
+
+    words = []
+    with open(f"{ROOT}/words/raw.txt") as f:
+        for line in f.readlines():
+            # Strip newline
+            word = line[:-1]
+
+            # ignore words less than 3 letters
+            if len(word) > 3:
+                # Save when 10000 accumulated
+                if len(words) >= 10000:
+                    print("inserting into db")
+                    insert(cursor, words)
+                    words = []
+
+                # Process word, add to list
+                print(f"processing {word}")
+                words.append((word, bitmap(word)))
+
+    # Final insert for remaning words
+    insert(cursor, words)
+    db.commit()
+    cursor.close()
+    db.close()
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,13 @@
+type Game {
+  id: ID!
+  guessed: [String!]!
+}
+
+type Query {
+  game(id: ID!): Game!
+}
+
+type Mutation {
+  createGame: Game!
+  addGuess(guess: String!): Game!
+}

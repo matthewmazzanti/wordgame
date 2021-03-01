@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"io"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -37,6 +38,7 @@ type Config struct {
 type ResolverRoot interface {
 	Mutation() MutationResolver
 	Query() QueryResolver
+	Subscription() SubscriptionResolver
 }
 
 type DirectiveRoot struct {
@@ -46,6 +48,7 @@ type ComplexityRoot struct {
 	Game struct {
 		Guessed func(childComplexity int) int
 		ID      func(childComplexity int) int
+		Letters func(childComplexity int) int
 	}
 
 	Mutation struct {
@@ -56,6 +59,10 @@ type ComplexityRoot struct {
 	Query struct {
 		Game func(childComplexity int, id string) int
 	}
+
+	Subscription struct {
+		WatchGame func(childComplexity int) int
+	}
 }
 
 type MutationResolver interface {
@@ -64,6 +71,9 @@ type MutationResolver interface {
 }
 type QueryResolver interface {
 	Game(ctx context.Context, id string) (*model.Game, error)
+}
+type SubscriptionResolver interface {
+	WatchGame(ctx context.Context) (<-chan *model.Game, error)
 }
 
 type executableSchema struct {
@@ -95,6 +105,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Game.ID(childComplexity), true
 
+	case "Game.letters":
+		if e.complexity.Game.Letters == nil {
+			break
+		}
+
+		return e.complexity.Game.Letters(childComplexity), true
+
 	case "Mutation.addGuess":
 		if e.complexity.Mutation.AddGuess == nil {
 			break
@@ -125,6 +142,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Query.Game(childComplexity, args["id"].(string)), true
+
+	case "Subscription.watchGame":
+		if e.complexity.Subscription.WatchGame == nil {
+			break
+		}
+
+		return e.complexity.Subscription.WatchGame(childComplexity), true
 
 	}
 	return 0, false
@@ -164,6 +188,23 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 				Data: buf.Bytes(),
 			}
 		}
+	case ast.Subscription:
+		next := ec._Subscription(ctx, rc.Operation.SelectionSet)
+
+		var buf bytes.Buffer
+		return func(ctx context.Context) *graphql.Response {
+			buf.Reset()
+			data := next()
+
+			if data == nil {
+				return nil
+			}
+			data.MarshalGQL(&buf)
+
+			return &graphql.Response{
+				Data: buf.Bytes(),
+			}
+		}
 
 	default:
 		return graphql.OneShot(graphql.ErrorResponse(ctx, "unsupported GraphQL operation"))
@@ -192,6 +233,7 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 var sources = []*ast.Source{
 	{Name: "schema.gql", Input: `type Game {
   id: ID!
+  letters: String!
   guessed: [String!]!
 }
 
@@ -202,6 +244,10 @@ type Query {
 type Mutation {
   createGame: Game!
   addGuess(guess: String!): Game!
+}
+
+type Subscription {
+  watchGame: Game!
 }
 `, BuiltIn: false},
 }
@@ -327,6 +373,41 @@ func (ec *executionContext) _Game_id(ctx context.Context, field graphql.Collecte
 	res := resTmp.(string)
 	fc.Result = res
 	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Game_letters(ctx context.Context, field graphql.CollectedField, obj *model.Game) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Game",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Letters, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Game_guessed(ctx context.Context, field graphql.CollectedField, obj *model.Game) (ret graphql.Marshaler) {
@@ -552,6 +633,51 @@ func (ec *executionContext) _Query___schema(ctx context.Context, field graphql.C
 	res := resTmp.(*introspection.Schema)
 	fc.Result = res
 	return ec.marshalO__Schema2ᚖgithubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐSchema(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Subscription_watchGame(ctx context.Context, field graphql.CollectedField) (ret func() graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = nil
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Subscription",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Subscription().WatchGame(rctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return nil
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return nil
+	}
+	return func() graphql.Marshaler {
+		res, ok := <-resTmp.(<-chan *model.Game)
+		if !ok {
+			return nil
+		}
+		return graphql.WriterFunc(func(w io.Writer) {
+			w.Write([]byte{'{'})
+			graphql.MarshalString(field.Alias).MarshalGQL(w)
+			w.Write([]byte{':'})
+			ec.marshalNGame2ᚖgithubᚗcomᚋmatthewmazzantiᚋwordgameᚋsrvᚋgraphᚋmodelᚐGame(ctx, field.Selections, res).MarshalGQL(w)
+			w.Write([]byte{'}'})
+		})
+	}
 }
 
 func (ec *executionContext) ___Directive_name(ctx context.Context, field graphql.CollectedField, obj *introspection.Directive) (ret graphql.Marshaler) {
@@ -1665,6 +1791,11 @@ func (ec *executionContext) _Game(ctx context.Context, sel ast.SelectionSet, obj
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
+		case "letters":
+			out.Values[i] = ec._Game_letters(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "guessed":
 			out.Values[i] = ec._Game_guessed(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -1759,6 +1890,26 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 		return graphql.Null
 	}
 	return out
+}
+
+var subscriptionImplementors = []string{"Subscription"}
+
+func (ec *executionContext) _Subscription(ctx context.Context, sel ast.SelectionSet) func() graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, subscriptionImplementors)
+	ctx = graphql.WithFieldContext(ctx, &graphql.FieldContext{
+		Object: "Subscription",
+	})
+	if len(fields) != 1 {
+		ec.Errorf(ctx, "must subscribe to exactly one stream")
+		return nil
+	}
+
+	switch fields[0].Name {
+	case "watchGame":
+		return ec._Subscription_watchGame(ctx, fields[0])
+	default:
+		panic("unknown field " + strconv.Quote(fields[0].Name))
+	}
 }
 
 var __DirectiveImplementors = []string{"__Directive"}

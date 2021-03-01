@@ -5,22 +5,33 @@ package graph
 
 import (
 	"context"
-	"fmt"
+	"time"
 
 	"github.com/matthewmazzanti/wordgame/srv/graph/generated"
 	"github.com/matthewmazzanti/wordgame/srv/graph/model"
 )
 
 func (r *mutationResolver) CreateGame(ctx context.Context) (*model.Game, error) {
-	panic(fmt.Errorf("not implemented"))
+	return r.Game.Freeze(), nil
 }
 
 func (r *mutationResolver) AddGuess(ctx context.Context, guess string) (*model.Game, error) {
-	panic(fmt.Errorf("not implemented"))
+	game := r.Game.Guess(guess)
+	return game, nil
 }
 
 func (r *queryResolver) Game(ctx context.Context, id string) (*model.Game, error) {
-	panic(fmt.Errorf("not implemented"))
+	return r.Resolver.Game.Freeze(), nil
+}
+
+func (r *subscriptionResolver) WatchGame(ctx context.Context) (<-chan *model.Game, error) {
+	id := int(time.Now().UnixNano())
+	c := r.Game.Watch(id)
+	go func() {
+		<-ctx.Done()
+		r.Game.Unwatch(id)
+	}()
+	return c, nil
 }
 
 // Mutation returns generated.MutationResolver implementation.
@@ -29,5 +40,9 @@ func (r *Resolver) Mutation() generated.MutationResolver { return &mutationResol
 // Query returns generated.QueryResolver implementation.
 func (r *Resolver) Query() generated.QueryResolver { return &queryResolver{r} }
 
+// Subscription returns generated.SubscriptionResolver implementation.
+func (r *Resolver) Subscription() generated.SubscriptionResolver { return &subscriptionResolver{r} }
+
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
+type subscriptionResolver struct{ *Resolver }

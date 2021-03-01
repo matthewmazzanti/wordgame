@@ -5,7 +5,7 @@ SRV="$ROOT/srv"
 
 CompileDaemon \
     -directory="$SRV" \
-    -command="$SRV/wordgame" \
+    -command="$SRV/srv" \
     -log-prefix=false \
     |& while IFS= read -r line; do
         echo "srv: $line"

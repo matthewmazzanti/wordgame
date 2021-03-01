@@ -4,5 +4,6 @@ package model
 
 type Game struct {
 	ID      string   `json:"id"`
+	Letters string   `json:"letters"`
 	Guessed []string `json:"guessed"`
 }

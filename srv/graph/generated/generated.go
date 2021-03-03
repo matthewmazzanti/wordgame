@@ -46,9 +46,17 @@ type DirectiveRoot struct {
 
 type ComplexityRoot struct {
 	Game struct {
-		Guessed func(childComplexity int) int
-		ID      func(childComplexity int) int
-		Letters func(childComplexity int) int
+		Correct   func(childComplexity int) int
+		ID        func(childComplexity int) int
+		Incorrect func(childComplexity int) int
+		Letters   func(childComplexity int) int
+		Total     func(childComplexity int) int
+	}
+
+	GuessResult struct {
+		Correct func(childComplexity int) int
+		Game    func(childComplexity int) int
+		Word    func(childComplexity int) int
 	}
 
 	Mutation struct {
@@ -67,13 +75,13 @@ type ComplexityRoot struct {
 
 type MutationResolver interface {
 	CreateGame(ctx context.Context) (*model.Game, error)
-	AddGuess(ctx context.Context, guess string) (*model.Game, error)
+	AddGuess(ctx context.Context, guess string) (*model.GuessResult, error)
 }
 type QueryResolver interface {
 	Game(ctx context.Context, id string) (*model.Game, error)
 }
 type SubscriptionResolver interface {
-	WatchGame(ctx context.Context) (<-chan *model.Game, error)
+	WatchGame(ctx context.Context) (<-chan *model.GuessResult, error)
 }
 
 type executableSchema struct {
@@ -91,12 +99,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 	_ = ec
 	switch typeName + "." + field {
 
-	case "Game.guessed":
-		if e.complexity.Game.Guessed == nil {
+	case "Game.correct":
+		if e.complexity.Game.Correct == nil {
 			break
 		}
 
-		return e.complexity.Game.Guessed(childComplexity), true
+		return e.complexity.Game.Correct(childComplexity), true
 
 	case "Game.id":
 		if e.complexity.Game.ID == nil {
@@ -105,12 +113,47 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Game.ID(childComplexity), true
 
+	case "Game.incorrect":
+		if e.complexity.Game.Incorrect == nil {
+			break
+		}
+
+		return e.complexity.Game.Incorrect(childComplexity), true
+
 	case "Game.letters":
 		if e.complexity.Game.Letters == nil {
 			break
 		}
 
 		return e.complexity.Game.Letters(childComplexity), true
+
+	case "Game.total":
+		if e.complexity.Game.Total == nil {
+			break
+		}
+
+		return e.complexity.Game.Total(childComplexity), true
+
+	case "GuessResult.correct":
+		if e.complexity.GuessResult.Correct == nil {
+			break
+		}
+
+		return e.complexity.GuessResult.Correct(childComplexity), true
+
+	case "GuessResult.game":
+		if e.complexity.GuessResult.Game == nil {
+			break
+		}
+
+		return e.complexity.GuessResult.Game(childComplexity), true
+
+	case "GuessResult.word":
+		if e.complexity.GuessResult.Word == nil {
+			break
+		}
+
+		return e.complexity.GuessResult.Word(childComplexity), true
 
 	case "Mutation.addGuess":
 		if e.complexity.Mutation.AddGuess == nil {
@@ -234,7 +277,15 @@ var sources = []*ast.Source{
 	{Name: "schema.gql", Input: `type Game {
   id: ID!
   letters: String!
-  guessed: [String!]!
+  correct: [String!]!
+  incorrect: [String!]!
+  total: Int!
+}
+
+type GuessResult {
+  correct: Boolean!
+  word: String!
+  game: Game!
 }
 
 type Query {
@@ -243,11 +294,11 @@ type Query {
 
 type Mutation {
   createGame: Game!
-  addGuess(guess: String!): Game!
+  addGuess(guess: String!): GuessResult!
 }
 
 type Subscription {
-  watchGame: Game!
+  watchGame: GuessResult!
 }
 `, BuiltIn: false},
 }
@@ -410,7 +461,7 @@ func (ec *executionContext) _Game_letters(ctx context.Context, field graphql.Col
 	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Game_guessed(ctx context.Context, field graphql.CollectedField, obj *model.Game) (ret graphql.Marshaler) {
+func (ec *executionContext) _Game_correct(ctx context.Context, field graphql.CollectedField, obj *model.Game) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -428,7 +479,7 @@ func (ec *executionContext) _Game_guessed(ctx context.Context, field graphql.Col
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Guessed, nil
+		return obj.Correct, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -443,6 +494,181 @@ func (ec *executionContext) _Game_guessed(ctx context.Context, field graphql.Col
 	res := resTmp.([]string)
 	fc.Result = res
 	return ec.marshalNString2ᚕstringᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Game_incorrect(ctx context.Context, field graphql.CollectedField, obj *model.Game) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Game",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Incorrect, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]string)
+	fc.Result = res
+	return ec.marshalNString2ᚕstringᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Game_total(ctx context.Context, field graphql.CollectedField, obj *model.Game) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Game",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Total, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _GuessResult_correct(ctx context.Context, field graphql.CollectedField, obj *model.GuessResult) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "GuessResult",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Correct, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _GuessResult_word(ctx context.Context, field graphql.CollectedField, obj *model.GuessResult) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "GuessResult",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Word, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _GuessResult_game(ctx context.Context, field graphql.CollectedField, obj *model.GuessResult) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "GuessResult",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   false,
+		IsResolver: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Game, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.Game)
+	fc.Result = res
+	return ec.marshalNGame2ᚖgithubᚗcomᚋmatthewmazzantiᚋwordgameᚋsrvᚋgraphᚋmodelᚐGame(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Mutation_createGame(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -517,9 +743,9 @@ func (ec *executionContext) _Mutation_addGuess(ctx context.Context, field graphq
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.Game)
+	res := resTmp.(*model.GuessResult)
 	fc.Result = res
-	return ec.marshalNGame2ᚖgithubᚗcomᚋmatthewmazzantiᚋwordgameᚋsrvᚋgraphᚋmodelᚐGame(ctx, field.Selections, res)
+	return ec.marshalNGuessResult2ᚖgithubᚗcomᚋmatthewmazzantiᚋwordgameᚋsrvᚋgraphᚋmodelᚐGuessResult(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query_game(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -666,7 +892,7 @@ func (ec *executionContext) _Subscription_watchGame(ctx context.Context, field g
 		return nil
 	}
 	return func() graphql.Marshaler {
-		res, ok := <-resTmp.(<-chan *model.Game)
+		res, ok := <-resTmp.(<-chan *model.GuessResult)
 		if !ok {
 			return nil
 		}
@@ -674,7 +900,7 @@ func (ec *executionContext) _Subscription_watchGame(ctx context.Context, field g
 			w.Write([]byte{'{'})
 			graphql.MarshalString(field.Alias).MarshalGQL(w)
 			w.Write([]byte{':'})
-			ec.marshalNGame2ᚖgithubᚗcomᚋmatthewmazzantiᚋwordgameᚋsrvᚋgraphᚋmodelᚐGame(ctx, field.Selections, res).MarshalGQL(w)
+			ec.marshalNGuessResult2ᚖgithubᚗcomᚋmatthewmazzantiᚋwordgameᚋsrvᚋgraphᚋmodelᚐGuessResult(ctx, field.Selections, res).MarshalGQL(w)
 			w.Write([]byte{'}'})
 		})
 	}
@@ -1796,8 +2022,55 @@ func (ec *executionContext) _Game(ctx context.Context, sel ast.SelectionSet, obj
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
-		case "guessed":
-			out.Values[i] = ec._Game_guessed(ctx, field, obj)
+		case "correct":
+			out.Values[i] = ec._Game_correct(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "incorrect":
+			out.Values[i] = ec._Game_incorrect(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "total":
+			out.Values[i] = ec._Game_total(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var guessResultImplementors = []string{"GuessResult"}
+
+func (ec *executionContext) _GuessResult(ctx context.Context, sel ast.SelectionSet, obj *model.GuessResult) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, guessResultImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("GuessResult")
+		case "correct":
+			out.Values[i] = ec._GuessResult_correct(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "word":
+			out.Values[i] = ec._GuessResult_word(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "game":
+			out.Values[i] = ec._GuessResult_game(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
@@ -2186,6 +2459,20 @@ func (ec *executionContext) marshalNGame2ᚖgithubᚗcomᚋmatthewmazzantiᚋwor
 	return ec._Game(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalNGuessResult2githubᚗcomᚋmatthewmazzantiᚋwordgameᚋsrvᚋgraphᚋmodelᚐGuessResult(ctx context.Context, sel ast.SelectionSet, v model.GuessResult) graphql.Marshaler {
+	return ec._GuessResult(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNGuessResult2ᚖgithubᚗcomᚋmatthewmazzantiᚋwordgameᚋsrvᚋgraphᚋmodelᚐGuessResult(ctx context.Context, sel ast.SelectionSet, v *model.GuessResult) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._GuessResult(ctx, sel, v)
+}
+
 func (ec *executionContext) unmarshalNID2string(ctx context.Context, v interface{}) (string, error) {
 	res, err := graphql.UnmarshalID(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -2193,6 +2480,21 @@ func (ec *executionContext) unmarshalNID2string(ctx context.Context, v interface
 
 func (ec *executionContext) marshalNID2string(ctx context.Context, sel ast.SelectionSet, v string) graphql.Marshaler {
 	res := graphql.MarshalID(v)
+	if res == graphql.Null {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+	}
+	return res
+}
+
+func (ec *executionContext) unmarshalNInt2int(ctx context.Context, v interface{}) (int, error) {
+	res, err := graphql.UnmarshalInt(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNInt2int(ctx context.Context, sel ast.SelectionSet, v int) graphql.Marshaler {
+	res := graphql.MarshalInt(v)
 	if res == graphql.Null {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "must not be null")

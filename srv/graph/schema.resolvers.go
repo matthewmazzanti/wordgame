@@ -15,16 +15,15 @@ func (r *mutationResolver) CreateGame(ctx context.Context) (*model.Game, error) 
 	return r.Game.Freeze(), nil
 }
 
-func (r *mutationResolver) AddGuess(ctx context.Context, guess string) (*model.Game, error) {
-	game := r.Game.Guess(guess)
-	return game, nil
+func (r *mutationResolver) AddGuess(ctx context.Context, guess string) (*model.GuessResult, error) {
+	return r.Game.Guess(guess), nil
 }
 
 func (r *queryResolver) Game(ctx context.Context, id string) (*model.Game, error) {
 	return r.Resolver.Game.Freeze(), nil
 }
 
-func (r *subscriptionResolver) WatchGame(ctx context.Context) (<-chan *model.Game, error) {
+func (r *subscriptionResolver) WatchGame(ctx context.Context) (<-chan *model.GuessResult, error) {
 	id := int(time.Now().UnixNano())
 	c := r.Game.Watch(id)
 	go func() {

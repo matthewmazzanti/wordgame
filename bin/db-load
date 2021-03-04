@@ -6,16 +6,18 @@ import mysql.connector
 
 ROOT = env["ROOT"]
 
-def bitmap(word):
+def processWord(word):
     bitmap = 0
+    unique_char = 0
     for char in word:
         index = ord(char.lower()) - 97
-        bitmap = bitmap | (1 << index)
-
-    return bitmap
+        mask = (1 << index)
+        unique_char = unique_char + (0 if (mask & bitmap) else 1)
+        bitmap = bitmap | mask
+    return bitmap, unique_char
 
 def insert(cursor, words):
-    query = "insert into word (word, bitmap) values (%s, %s);"
+    query = "insert into word (word, bitmap, unique_char) values (%s, %s, %s);"
     cursor.executemany(query, words)
 
 def main():
@@ -33,18 +35,22 @@ def main():
         for line in f.readlines():
             # Strip newline
             word = line[:-1]
-
+            
             # ignore words less than 3 letters
             if len(word) > 3:
-                # Save when 10000 accumulated
-                if len(words) >= 10000:
-                    print("inserting into db")
-                    insert(cursor, words)
-                    words = []
+                # process the word, get the bitmap and unique letter count
+                # words with > 8 unique letter are rejected
+                bitmap, unique_char = processWord(word)
+                if(unique_char < 8):
+                    # Save when 10000 accumulated
+                    if len(words) >= 10000:
+                        print("inserting into db")
+                        insert(cursor, words)
+                        words = []
 
-                # Process word, add to list
-                print(f"processing {word}")
-                words.append((word, bitmap(word)))
+                    # Process word, add to list
+                    print(f"processing {word} [u: {unique_char}, m:{hex(bitmap)}]")
+                    words.append((word, bitmap, unique_char))
 
     # Final insert for remaning words
     insert(cursor, words)

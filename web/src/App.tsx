@@ -9,7 +9,8 @@ import {
 
 import { WebSocketLink } from '@apollo/client/link/ws';
 import { getMainDefinition } from '@apollo/client/utilities';
-import { Game } from './Game';
+import { BrowserRouter as Router, Route } from 'react-router-dom';
+import { Home, Game } from './Game';
 import './App.css';
 
 const wsLink = new WebSocketLink({
@@ -43,7 +44,10 @@ const client = new ApolloClient({
 const App = () => {
   return (
     <ApolloProvider client={client}>
-      <Game/>
+      <Router>
+        <Route path="/:id" component={Game}/>
+        <Route path="/" exact={true} component={Home}/>
+      </Router>
     </ApolloProvider>
   );
 }

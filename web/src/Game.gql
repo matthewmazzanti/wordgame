@@ -1,0 +1,40 @@
+fragment updateFields on Game {
+  id,
+  letters,
+  correct,
+  incorrect
+}
+
+mutation newGame {
+  newGame {
+    ...updateFields,
+    total
+  }
+}
+
+query currGame($id: ID!) {
+  game(id: $id) {
+    ...updateFields,
+    total
+  }
+}
+
+mutation addGuess($id: ID!, $guess: String!) {
+  addGuess(id: $id, guess: $guess) {
+    correct,
+    word,
+    game {
+      ...updateFields,
+    }
+  }
+}
+
+subscription watchGame($id: ID!) {
+  watchGame(id: $id) {
+    correct,
+    word,
+    game {
+      ...updateFields,
+    }
+  }
+}

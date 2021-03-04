@@ -11,5 +11,5 @@ import (
 
 type Resolver struct{
 	DB *sql.DB
-	Game *game.Game
+	Games map[string]*game.Game
 }

@@ -5,32 +5,57 @@ package graph
 
 import (
 	"context"
+	"fmt"
 	"time"
 
+	"github.com/matthewmazzanti/wordgame/srv/game"
 	"github.com/matthewmazzanti/wordgame/srv/graph/generated"
 	"github.com/matthewmazzanti/wordgame/srv/graph/model"
 )
 
-func (r *mutationResolver) CreateGame(ctx context.Context) (*model.Game, error) {
-	return r.Game.Freeze(), nil
+func (r *mutationResolver) NewGame(ctx context.Context) (*model.Game, error) {
+	game, err := game.New(r.DB)
+	if err != nil {
+		return nil, err
+	}
+
+	r.Games[game.ID] = game
+
+	return game.Freeze(), nil
 }
 
-func (r *mutationResolver) AddGuess(ctx context.Context, guess string) (*model.GuessResult, error) {
-	return r.Game.Guess(guess), nil
+func (r *mutationResolver) AddGuess(ctx context.Context, id string, guess string) (*model.GuessResult, error) {
+	game, ok := r.Games[id]
+	if !ok {
+		return nil, fmt.Errorf("No game with id %s", id)
+	}
+
+	return game.Guess(guess), nil
 }
 
 func (r *queryResolver) Game(ctx context.Context, id string) (*model.Game, error) {
-	return r.Resolver.Game.Freeze(), nil
+	game, ok := r.Games[id]
+	if !ok {
+		return nil, fmt.Errorf("No game with id %s", id)
+	}
+
+	return game.Freeze(), nil
 }
 
-func (r *subscriptionResolver) WatchGame(ctx context.Context) (<-chan *model.GuessResult, error) {
-	id := int(time.Now().UnixNano())
-	c := r.Game.Watch(id)
+func (r *subscriptionResolver) WatchGame(ctx context.Context, id string) (<-chan *model.GuessResult, error) {
+	game, ok := r.Games[id]
+	if !ok {
+		return nil, fmt.Errorf("No game with id %s", id)
+	}
+
+	watchID := int(time.Now().UnixNano())
+	channel := game.Watch(watchID)
 	go func() {
 		<-ctx.Done()
-		r.Game.Unwatch(id)
+		game.Unwatch(watchID)
 	}()
-	return c, nil
+
+	return channel, nil
 }
 
 // Mutation returns generated.MutationResolver implementation.

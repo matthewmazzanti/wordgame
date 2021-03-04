@@ -18,6 +18,7 @@ type Game struct {
 	mutex *sync.Mutex
 	clients map[int]chan<- *model.GuessResult
 
+	ID string
 	letters string
 	complete bool
 	words []Word
@@ -35,10 +36,14 @@ func New(db *sql.DB) (*Game, error) {
 	fmt.Println(words)
 
 	g := &Game{
-		letters: letters,
-		words: words,
 		mutex: &sync.Mutex{},
 		clients: make(map[int]chan<- *model.GuessResult),
+
+		ID: randID(10),
+		complete: false,
+		letters: letters,
+		words: words,
+		incorrect: make([]string, 0),
 	}
 
 	return g, nil
@@ -64,7 +69,7 @@ func (g *Game) freeze() *model.Game {
 
 
 	return &model.Game{
-		ID: g.letters,
+		ID: g.ID,
 		Letters: g.letters,
 		Correct: correct,
 		Incorrect: incorrect,
@@ -115,9 +120,12 @@ func (g *Game) Watch(id int) <-chan *model.GuessResult {
 	client := make(chan *model.GuessResult)
 	g.clients[id] = client
 
-	fmt.Println("added client")
-	fmt.Println(id)
-	fmt.Println(len(g.clients))
+	fmt.Printf(
+		"Added client %d to game %s. Total clients: %d\n",
+		id,
+		g.ID,
+		len(g.clients),
+	)
 
 	return client
 }
@@ -132,9 +140,12 @@ func (g *Game) Unwatch(id int) {
 		delete(g.clients, id)
 	}
 
-	fmt.Println("deleted client")
-	fmt.Println(id)
-	fmt.Println(len(g.clients))
+	fmt.Printf(
+		"Deleted client %d to game %s. Total clients: %d\n",
+		id,
+		g.ID,
+		len(g.clients),
+	)
 }
 
 func (g *Game) isComplete() bool {

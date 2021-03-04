@@ -60,8 +60,8 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		AddGuess   func(childComplexity int, guess string) int
-		CreateGame func(childComplexity int) int
+		AddGuess func(childComplexity int, id string, guess string) int
+		NewGame  func(childComplexity int) int
 	}
 
 	Query struct {
@@ -69,19 +69,19 @@ type ComplexityRoot struct {
 	}
 
 	Subscription struct {
-		WatchGame func(childComplexity int) int
+		WatchGame func(childComplexity int, id string) int
 	}
 }
 
 type MutationResolver interface {
-	CreateGame(ctx context.Context) (*model.Game, error)
-	AddGuess(ctx context.Context, guess string) (*model.GuessResult, error)
+	NewGame(ctx context.Context) (*model.Game, error)
+	AddGuess(ctx context.Context, id string, guess string) (*model.GuessResult, error)
 }
 type QueryResolver interface {
 	Game(ctx context.Context, id string) (*model.Game, error)
 }
 type SubscriptionResolver interface {
-	WatchGame(ctx context.Context) (<-chan *model.GuessResult, error)
+	WatchGame(ctx context.Context, id string) (<-chan *model.GuessResult, error)
 }
 
 type executableSchema struct {
@@ -165,14 +165,14 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.AddGuess(childComplexity, args["guess"].(string)), true
+		return e.complexity.Mutation.AddGuess(childComplexity, args["id"].(string), args["guess"].(string)), true
 
-	case "Mutation.createGame":
-		if e.complexity.Mutation.CreateGame == nil {
+	case "Mutation.newGame":
+		if e.complexity.Mutation.NewGame == nil {
 			break
 		}
 
-		return e.complexity.Mutation.CreateGame(childComplexity), true
+		return e.complexity.Mutation.NewGame(childComplexity), true
 
 	case "Query.game":
 		if e.complexity.Query.Game == nil {
@@ -191,7 +191,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			break
 		}
 
-		return e.complexity.Subscription.WatchGame(childComplexity), true
+		args, err := ec.field_Subscription_watchGame_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Subscription.WatchGame(childComplexity, args["id"].(string)), true
 
 	}
 	return 0, false
@@ -293,12 +298,12 @@ type Query {
 }
 
 type Mutation {
-  createGame: Game!
-  addGuess(guess: String!): GuessResult!
+  newGame: Game!
+  addGuess(id: ID!, guess: String!): GuessResult!
 }
 
 type Subscription {
-  watchGame: GuessResult!
+  watchGame(id: ID!): GuessResult!
 }
 `, BuiltIn: false},
 }
@@ -312,14 +317,23 @@ func (ec *executionContext) field_Mutation_addGuess_args(ctx context.Context, ra
 	var err error
 	args := map[string]interface{}{}
 	var arg0 string
-	if tmp, ok := rawArgs["guess"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("guess"))
-		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+		arg0, err = ec.unmarshalNID2string(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["guess"] = arg0
+	args["id"] = arg0
+	var arg1 string
+	if tmp, ok := rawArgs["guess"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("guess"))
+		arg1, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["guess"] = arg1
 	return args, nil
 }
 
@@ -339,6 +353,21 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 }
 
 func (ec *executionContext) field_Query_game_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+		arg0, err = ec.unmarshalNID2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Subscription_watchGame_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
 	var arg0 string
@@ -671,7 +700,7 @@ func (ec *executionContext) _GuessResult_game(ctx context.Context, field graphql
 	return ec.marshalNGame2ᚖgithubᚗcomᚋmatthewmazzantiᚋwordgameᚋsrvᚋgraphᚋmodelᚐGame(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Mutation_createGame(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+func (ec *executionContext) _Mutation_newGame(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -689,7 +718,7 @@ func (ec *executionContext) _Mutation_createGame(ctx context.Context, field grap
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().CreateGame(rctx)
+		return ec.resolvers.Mutation().NewGame(rctx)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -731,7 +760,7 @@ func (ec *executionContext) _Mutation_addGuess(ctx context.Context, field graphq
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().AddGuess(rctx, args["guess"].(string))
+		return ec.resolvers.Mutation().AddGuess(rctx, args["id"].(string), args["guess"].(string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -877,9 +906,16 @@ func (ec *executionContext) _Subscription_watchGame(ctx context.Context, field g
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Subscription_watchGame_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return nil
+	}
+	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Subscription().WatchGame(rctx)
+		return ec.resolvers.Subscription().WatchGame(rctx, args["id"].(string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2100,8 +2136,8 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Mutation")
-		case "createGame":
-			out.Values[i] = ec._Mutation_createGame(ctx, field)
+		case "newGame":
+			out.Values[i] = ec._Mutation_newGame(ctx, field)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}

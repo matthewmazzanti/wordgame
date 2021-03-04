@@ -1,52 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import {
-  gql,
-  useQuery,
-  useMutation,
-  useSubscription,
-} from '@apollo/client';
+import { useHistory, useParams } from 'react-router-dom';
 
-const CURR_GAME = gql`
-  query {
-    game(id: "asdf") {
-      id,
-      letters,
-      correct,
-      incorrect,
-      total
-    }
-  }
-`;
-
-const ADD_GUESS = gql`
-  mutation addGuess($guess: String!) {
-    addGuess(guess: $guess) {
-      correct,
-      word,
-      game {
-        id,
-        letters,
-        correct,
-        incorrect,
-      }
-    }
-  }
-`;
-
-const WATCH_GAME = gql`
-  subscription {
-    watchGame {
-      correct,
-      word,
-      game {
-        id,
-        letters,
-        correct,
-        incorrect,
-      }
-    }
-  }
-`;
+import * as gen from './generated/graphql';
 
 type Event = {
   correct: boolean,
@@ -65,15 +20,34 @@ const ShowEvent = ({ event }: ShowEventProps) => {
     : <div>{event.word} not in word list</div>;
 }
 
-const useAddGuess = () => {
-  const [ addGuess, { data } ] = useMutation(ADD_GUESS);
+const useNewGame = () => {
+  const hist = useHistory();
+  const [ newGame, { data } ] = gen.useNewGameMutation();
+
+  useEffect(() => {
+    if (!data) return;
+    hist.push(data.newGame.id);
+  }, [hist, data])
+
+  return newGame;
+};
+
+const useGame = (id: string) => {
+  const vars = { variables: { id: id } }
+  const query = gen.useCurrGameQuery(vars);
+  gen.useWatchGameSubscription(vars);
+
+  return query;
+}
+
+const useAddGuess = (id: string) => {
+  const [ addGuess, { data } ] = gen.useAddGuessMutation();
   const [ event, setEvent ] = useState<Event | null>(null);
 
   useEffect(() => {
-    if (data === undefined) return;
+    if (!data) return;
 
     setEvent({
-      // @ts-ignore
       correct: data.addGuess.correct,
       word: data.addGuess.word
     });
@@ -83,18 +57,23 @@ const useAddGuess = () => {
     return () => clearTimeout(timer);
   }, [data]);
 
-  return [addGuess, event] as const;
-}
+  const addGuessID = (guess: string) => addGuess({variables: {id, guess}});
+
+  return [addGuessID, event] as const;
+};
+
 
 const Game = () => {
-  const { loading, error, data } = useQuery(CURR_GAME);
-  const [ addGuess, event ] = useAddGuess();
-  useSubscription(WATCH_GAME);
+  const { id } = useParams<{id: string}>();
 
-  const [guess, setGuess] = useState("");
+  const { loading, error, data } = useGame(id);
+  const [ addGuess, event ] = useAddGuess(id);
+  const newGame = useNewGame();
+
+  const [ guess, setGuess ] = useState("");
 
   if (loading) return <div>Loading</div>;
-  if (error) return <div>Error</div>;
+  if (error || !data) return <div>Error</div>;
 
   const game = data.game;
 
@@ -122,7 +101,7 @@ const Game = () => {
           disabled={guess.length <= 3}
           style={{margin: "5px", height: "40px", width: "130px"}}
           onClick={() => {
-            addGuess({ variables: { guess }});
+            addGuess(guess);
             setGuess("");
           }}
         >
@@ -134,6 +113,13 @@ const Game = () => {
           onClick={() => setGuess(guess.slice(0, guess.length - 1))}
         >
           Delete
+        </button>
+
+        <button
+          style={{margin: "5px", height: "40px", width: "130px"}}
+          onClick={() => newGame()}
+        >
+          New Game
         </button>
       </div>
 
@@ -160,4 +146,10 @@ const Game = () => {
   );
 };
 
-export { Game };
+const Home = () => {
+  const newGame = useNewGame();
+  return <button onClick={() => newGame()}>Hello world!</button>
+}
+
+
+export { Game, Home };

@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"time"
 	"fmt"
+	"context"
 
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/handler/transport"
@@ -44,14 +45,9 @@ func main() {
 		time.Sleep(5 * time.Second)
 	}
 
-	game, err := game.New(db)
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	resolver := graph.Resolver{
 		DB: db,
-		Game: game,
+		Games: make(map[string]*game.Game),
 	}
 
 	config := generated.Config{ Resolvers: &resolver }
@@ -77,15 +73,48 @@ func main() {
 	router.Use(cors.New(cors.Options{
 		AllowedOrigins:   []string{
 			"http://localhost:8080",
+			"http://lambda.olympus:8080",
 			"http://localhost:3000",
 			"http://lambda.olympus:3000",
 		},
 		AllowCredentials: true,
 		Debug:            false,
 	}).Handler)
+	//router.Use(SetCookies)
 	router.Handle("/", playground.Handler("GraphQL playground", "/query"))
 	router.Handle("/query", srv)
 
 	log.Printf("connect to http://localhost:%s/ for GraphQL playground", port)
 	log.Fatal(http.ListenAndServe(":"+port, router))
+}
+
+func SetCookies(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		c, err := r.Cookie("user-id")
+		fmt.Println(c)
+		fmt.Println(err)
+
+		// Allow unauthenticated users in
+		var id string;
+		if err != nil || c == nil {
+			id = game.RandID()
+			http.SetCookie(w, &http.Cookie{
+				Name: "user-id",
+				Value: id,
+				SameSite: http.SameSiteNoneMode,
+			})
+
+			fmt.Printf("No cookie set! Set to: %s\n", id)
+		} else {
+			id = c.Value
+			fmt.Printf("Cookie set to: %s\n", id)
+		}
+
+		// put it in context
+		ctx := context.WithValue(r.Context(), "user-id", id)
+
+		// and call the next with our new context
+		r = r.WithContext(ctx)
+		next.ServeHTTP(w, r)
+	})
 }

@@ -66,6 +66,14 @@ func randAlpha() byte {
 	return randFrom("abcdefghijklmnoprtuvwy")
 }
 
+func randCapsAlphaNum() byte {
+	alpha := "abcdefghijklmnopqrstuvwxyz"
+	ALPHA := "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	num := "1234567890"
+
+	return randFrom(alpha + ALPHA + num)
+}
+
 func randLetters(length int) string {
 	if length < 1 {
 		return ""
@@ -98,4 +106,17 @@ func shuffle(letters []byte) []byte {
 	}
 
 	return letters
+}
+
+func randID(length int) string {
+	id := make([]byte, length)
+	for i := 0; i < length; i++ {
+		id[i] = randCapsAlphaNum()
+	}
+
+	return string(id)
+}
+
+func RandID() string {
+	return randID(10)
 }

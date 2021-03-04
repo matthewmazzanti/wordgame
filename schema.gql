@@ -17,10 +17,10 @@ type Query {
 }
 
 type Mutation {
-  createGame: Game!
-  addGuess(guess: String!): GuessResult!
+  newGame: Game!
+  addGuess(id: ID!, guess: String!): GuessResult!
 }
 
 type Subscription {
-  watchGame: GuessResult!
+  watchGame(id: ID!): GuessResult!
 }

@@ -1,6 +1,15 @@
 type Game {
   id: ID!
-  guessed: [String!]!
+  letters: String!
+  correct: [String!]!
+  incorrect: [String!]!
+  total: Int!
+}
+
+type GuessResult {
+  correct: Boolean!
+  word: String!
+  game: Game!
 }
 
 type Query {
@@ -8,6 +17,10 @@ type Query {
 }
 
 type Mutation {
-  createGame: Game!
-  addGuess(guess: String!): Game!
+  newGame: Game!
+  addGuess(id: ID!, guess: String!): GuessResult!
+}
+
+type Subscription {
+  watchGame(id: ID!): GuessResult!
 }

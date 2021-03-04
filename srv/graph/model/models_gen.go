@@ -3,6 +3,15 @@
 package model
 
 type Game struct {
-	ID      string   `json:"id"`
-	Guessed []string `json:"guessed"`
+	ID        string   `json:"id"`
+	Letters   string   `json:"letters"`
+	Correct   []string `json:"correct"`
+	Incorrect []string `json:"incorrect"`
+	Total     int      `json:"total"`
+}
+
+type GuessResult struct {
+	Correct bool   `json:"correct"`
+	Word    string `json:"word"`
+	Game    *Game  `json:"game"`
 }

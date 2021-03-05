@@ -10,7 +10,7 @@ import {
 import { WebSocketLink } from '@apollo/client/link/ws';
 import { getMainDefinition } from '@apollo/client/utilities';
 import { BrowserRouter as Router, Route } from 'react-router-dom';
-import { Home, Game } from './Game';
+import { Home, Game, EnsureUser } from './Game';
 import './App.css';
 
 const wsLink = new WebSocketLink({
@@ -22,6 +22,7 @@ const wsLink = new WebSocketLink({
 
 const httpLink = new HttpLink({
   uri: "http://lambda.olympus:8080/query",
+  credentials: "include",
 });
 
 const splitLink = split(
@@ -41,13 +42,17 @@ const client = new ApolloClient({
   cache: new InMemoryCache()
 });
 
+
+
 const App = () => {
   return (
     <ApolloProvider client={client}>
-      <Router>
-        <Route path="/:id" component={Game}/>
-        <Route path="/" exact={true} component={Home}/>
-      </Router>
+      <EnsureUser>
+        <Router>
+          <Route path="/:id" component={Game}/>
+          <Route path="/" exact={true} component={Home}/>
+        </Router>
+      </EnsureUser>
     </ApolloProvider>
   );
 }

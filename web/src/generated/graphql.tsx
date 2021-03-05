@@ -13,6 +13,12 @@ export type Scalars = {
   Float: number;
 };
 
+export type User = {
+  __typename?: 'User';
+  id: Scalars['ID'];
+  name: Scalars['String'];
+};
+
 export type Game = {
   __typename?: 'Game';
   id: Scalars['ID'];
@@ -41,6 +47,7 @@ export type QueryGameArgs = {
 
 export type Mutation = {
   __typename?: 'Mutation';
+  setUser: User;
   newGame: Game;
   addGuess: GuessResult;
 };
@@ -64,6 +71,17 @@ export type SubscriptionWatchGameArgs = {
 export type UpdateFieldsFragment = (
   { __typename?: 'Game' }
   & Pick<Game, 'id' | 'letters' | 'correct' | 'incorrect'>
+);
+
+export type SetUserMutationVariables = Exact<{ [key: string]: never; }>;
+
+
+export type SetUserMutation = (
+  { __typename?: 'Mutation' }
+  & { setUser: (
+    { __typename?: 'User' }
+    & Pick<User, 'id' | 'name'>
+  ) }
 );
 
 export type NewGameMutationVariables = Exact<{ [key: string]: never; }>;
@@ -135,6 +153,38 @@ export const UpdateFieldsFragmentDoc = gql`
   incorrect
 }
     `;
+export const SetUserDocument = gql`
+    mutation setUser {
+  setUser {
+    id
+    name
+  }
+}
+    `;
+export type SetUserMutationFn = Apollo.MutationFunction<SetUserMutation, SetUserMutationVariables>;
+
+/**
+ * __useSetUserMutation__
+ *
+ * To run a mutation, you first call `useSetUserMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useSetUserMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [setUserMutation, { data, loading, error }] = useSetUserMutation({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useSetUserMutation(baseOptions?: Apollo.MutationHookOptions<SetUserMutation, SetUserMutationVariables>) {
+        return Apollo.useMutation<SetUserMutation, SetUserMutationVariables>(SetUserDocument, baseOptions);
+      }
+export type SetUserMutationHookResult = ReturnType<typeof useSetUserMutation>;
+export type SetUserMutationResult = Apollo.MutationResult<SetUserMutation>;
+export type SetUserMutationOptions = Apollo.BaseMutationOptions<SetUserMutation, SetUserMutationVariables>;
 export const NewGameDocument = gql`
     mutation newGame {
   newGame {

@@ -1,4 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useContext,
+  FunctionComponent as FC
+} from 'react';
 import { useHistory, useParams } from 'react-router-dom';
 
 import * as gen from './generated/graphql';
@@ -62,10 +67,10 @@ const useAddGuess = (id: string) => {
   return [addGuessID, event] as const;
 };
 
+const Game: FC = () => {
+  const user = useContext(UserContext);
 
-const Game = () => {
   const { id } = useParams<{id: string}>();
-
   const { loading, error, data } = useGame(id);
   const [ addGuess, event ] = useAddGuess(id);
   const newGame = useNewGame();
@@ -79,6 +84,7 @@ const Game = () => {
 
   return (
     <div>
+      <div>{user.id} {user.name}</div>
       <div>&nbsp;{guess}</div>
 
       {game.letters.split("").map((c: string) =>
@@ -146,10 +152,25 @@ const Game = () => {
   );
 };
 
-const Home = () => {
+const Home: FC = () => {
   const newGame = useNewGame();
-  return <button onClick={() => newGame()}>Hello world!</button>
+  return <button onClick={() => newGame()}>New Game!</button>
 }
 
+const UserContext = React.createContext<gen.User>(null as unknown as gen.User);
 
-export { Game, Home };
+const EnsureUser: FC = ({ children }) => {
+  const [ setUser, { data } ] = gen.useSetUserMutation();
+  useEffect(() => { setUser(); }, [setUser]);
+
+  // TODO: Better error handling
+  if (!data) return <div>Loading</div>;
+
+  return (
+    <UserContext.Provider value={data.setUser}>
+      {children}
+    </UserContext.Provider>
+  );
+}
+
+export { Game, Home, EnsureUser };

@@ -5,6 +5,13 @@ fragment updateFields on Game {
   incorrect
 }
 
+mutation setUser {
+  setUser {
+    id,
+    name
+  }
+}
+
 mutation newGame {
   newGame {
     ...updateFields,

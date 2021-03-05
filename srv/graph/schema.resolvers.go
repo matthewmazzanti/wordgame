@@ -6,6 +6,7 @@ package graph
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/matthewmazzanti/wordgame/srv/game"
@@ -13,7 +14,41 @@ import (
 	"github.com/matthewmazzanti/wordgame/srv/graph/model"
 )
 
+func (r *mutationResolver) SetUser(ctx context.Context) (*model.User, error) {
+	user := ctx.Value("user").(*model.User)
+	w := ctx.Value("writer").(http.ResponseWriter)
+
+	/*
+	fmt.Println(user)
+	fmt.Println(w)
+	*/
+
+	if user == nil {
+		user = &model.User{
+			ID:   game.RandID(),
+			Name: "Matthew",
+		}
+
+		r.Users[user.ID] = user
+
+		http.SetCookie(w, &http.Cookie{
+			Name:     "user-id",
+			Value:    user.ID,
+			SameSite: http.SameSiteNoneMode,
+		})
+
+		fmt.Printf("No cookie set! Set to: %s\n", user.ID)
+	}
+
+	return user, nil
+}
+
 func (r *mutationResolver) NewGame(ctx context.Context) (*model.Game, error) {
+	user := ctx.Value("user").(*model.User)
+	if user == nil {
+		return nil, fmt.Errorf("No user found")
+	}
+
 	game, err := game.New(r.DB)
 	if err != nil {
 		return nil, err
@@ -25,6 +60,11 @@ func (r *mutationResolver) NewGame(ctx context.Context) (*model.Game, error) {
 }
 
 func (r *mutationResolver) AddGuess(ctx context.Context, id string, guess string) (*model.GuessResult, error) {
+	user := ctx.Value("user").(*model.User)
+	if user == nil {
+		return nil, fmt.Errorf("No user found")
+	}
+
 	game, ok := r.Games[id]
 	if !ok {
 		return nil, fmt.Errorf("No game with id %s", id)
@@ -34,6 +74,11 @@ func (r *mutationResolver) AddGuess(ctx context.Context, id string, guess string
 }
 
 func (r *queryResolver) Game(ctx context.Context, id string) (*model.Game, error) {
+	user := ctx.Value("user").(*model.User)
+	if user == nil {
+		return nil, fmt.Errorf("No user found")
+	}
+
 	game, ok := r.Games[id]
 	if !ok {
 		return nil, fmt.Errorf("No game with id %s", id)
@@ -43,6 +88,11 @@ func (r *queryResolver) Game(ctx context.Context, id string) (*model.Game, error
 }
 
 func (r *subscriptionResolver) WatchGame(ctx context.Context, id string) (<-chan *model.GuessResult, error) {
+	user := ctx.Value("user").(*model.User)
+	if user == nil {
+		return nil, fmt.Errorf("No user found")
+	}
+
 	game, ok := r.Games[id]
 	if !ok {
 		return nil, fmt.Errorf("No game with id %s", id)

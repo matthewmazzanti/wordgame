@@ -1,3 +1,8 @@
+type User {
+  id: ID!
+  name: String!
+}
+
 type Game {
   id: ID!
   letters: String!
@@ -17,6 +22,7 @@ type Query {
 }
 
 type Mutation {
+  setUser: User!
   newGame: Game!
   addGuess(id: ID!, guess: String!): GuessResult!
 }

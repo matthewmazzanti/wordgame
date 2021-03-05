@@ -15,3 +15,8 @@ type GuessResult struct {
 	Word    string `json:"word"`
 	Game    *Game  `json:"game"`
 }
+
+type User struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}

@@ -7,15 +7,14 @@ import (
 	"database/sql"
 	"math/rand"
 	"time"
-	"fmt"
-	"context"
+	_ "fmt"
 
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/handler/transport"
 	"github.com/99designs/gqlgen/graphql/handler/extension"
 
 	"github.com/99designs/gqlgen/graphql/playground"
-	"github.com/matthewmazzanti/wordgame/srv/game"
+	_ "github.com/matthewmazzanti/wordgame/srv/game"
 	"github.com/matthewmazzanti/wordgame/srv/graph"
 	"github.com/matthewmazzanti/wordgame/srv/graph/generated"
 	"github.com/gorilla/websocket"
@@ -45,12 +44,8 @@ func main() {
 		time.Sleep(5 * time.Second)
 	}
 
-	resolver := graph.Resolver{
-		DB: db,
-		Games: make(map[string]*game.Game),
-	}
-
-	config := generated.Config{ Resolvers: &resolver }
+	resolver := graph.NewResolver(db)
+	config := generated.Config{ Resolvers: resolver }
 	schema := generated.NewExecutableSchema(config)
 	srv := handler.New(schema)
 	srv.AddTransport(transport.POST{})
@@ -59,8 +54,6 @@ func main() {
 		Upgrader: websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool {
 				// Check against your desired domains here
-				fmt.Println("checking host")
-				fmt.Println(r.Host)
 				return r.Host == "lambda.olympus:8080" || r.Host == "localhost:8080"
 			},
 			ReadBufferSize:  1024,
@@ -80,41 +73,10 @@ func main() {
 		AllowCredentials: true,
 		Debug:            false,
 	}).Handler)
-	//router.Use(SetCookies)
+	router.Use(resolver.SetCookies)
 	router.Handle("/", playground.Handler("GraphQL playground", "/query"))
 	router.Handle("/query", srv)
 
 	log.Printf("connect to http://localhost:%s/ for GraphQL playground", port)
 	log.Fatal(http.ListenAndServe(":"+port, router))
-}
-
-func SetCookies(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		c, err := r.Cookie("user-id")
-		fmt.Println(c)
-		fmt.Println(err)
-
-		// Allow unauthenticated users in
-		var id string;
-		if err != nil || c == nil {
-			id = game.RandID()
-			http.SetCookie(w, &http.Cookie{
-				Name: "user-id",
-				Value: id,
-				SameSite: http.SameSiteNoneMode,
-			})
-
-			fmt.Printf("No cookie set! Set to: %s\n", id)
-		} else {
-			id = c.Value
-			fmt.Printf("Cookie set to: %s\n", id)
-		}
-
-		// put it in context
-		ctx := context.WithValue(r.Context(), "user-id", id)
-
-		// and call the next with our new context
-		r = r.WithContext(ctx)
-		next.ServeHTTP(w, r)
-	})
 }
